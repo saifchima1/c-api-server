@@ -1,5 +1,5 @@
+#include "defin.h"
 #include <arpa/inet.h>
-#include <bits/sockaddr_storage.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -63,8 +63,11 @@ int main(void) {
       perror("error code:");
       exit(bytes);
     }
+    printf("%s\nbytes receved: %li", recvbuffer, bytes);
 
-    // handle the logic and put the results in send buffer
+    char *sendbuffer = handler(recvbuffer, strlen(recvbuffer));
+
+    sndbufflen = strlen(sendbuffer);
 
     if (!sendbuffer) {
       printf("the buffer pointer is null skipped this itterstion\n");

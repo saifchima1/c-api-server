@@ -1,11 +1,13 @@
+#include "defin.h"
 #include "hashmap.h"
 #include <__stdarg_va_list.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define AMOUNT 5
+#define AMOUNT 5 // amount of functions
+#define ARGMAX 255
+#define ARGBUFF 54
 
 // initialisation
 typedef enum { nutral, save, load } keys;
@@ -16,7 +18,7 @@ struct fundata {
 };
 
 // functions definition
-char *initprofile(int count, ...) {
+char *initprofile(int count, char args[][54]) {
   if (count < 2) {
     perror("error: too few arguments\n");
     return NULL;
@@ -24,14 +26,12 @@ char *initprofile(int count, ...) {
     perror("error: too much arguments\n");
     return NULL;
   }
-  va_list args;
-  va_start(args, count);
   FILE *pdatabase = fopen("../data.json", "a");
   if (!pdatabase) {
     perror("error: failed to save the file\n");
     return NULL;
   }
-  fprintf(pdatabase, "%s : {\n%s}", va_arg(args, char *), va_arg(args, char *));
+  fprintf(pdatabase, "%s : {\n%s}", args[0], args[1]);
 
   if (fclose(pdatabase) != 0) {
     perror("error: could not close the file safely\npress enter to continue "
@@ -51,11 +51,12 @@ char *handler(const char *request, size_t size) {
   // initialising the hashmap
   hashmap *funmap = inithash(AMOUNT);
   appendhash(funmap, "initprofile", initprofile, 1);
+  printhashmapstatus(funmap);
   // parsing data
   const char *tail = request;
   const char *head = NULL;
   char command[54] = {0};
-  char args[255][54] = {0};
+  char args[ARGMAX][ARGBUFF] = {0};
   bool ignore = false;
   int offset = -1;
   int length = -1;
@@ -90,5 +91,14 @@ char *handler(const char *request, size_t size) {
       amountcopied++;
     }
   }
-  callvalue(funmap, command)(amountcopied, )
+  // for debuggin could be removed
+  printf("%s:\n", command);
+  for (int i = 0; i < ARGMAX; i++) {
+    printf(" %s,", args[i]);
+  }
+  printf("\n");
+  // end of debuging block
+  char *(*pfunction)(int, char[][ARGBUFF]) = callvalue(funmap, command).value;
+  char *result = pfunction(amountcopied - 1, args);
+  return result;
 }
