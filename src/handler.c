@@ -1,58 +1,29 @@
 #include "defin.h"
 #include "hashmap.h"
-#include <__stdarg_va_list.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define AMOUNT 5 // amount of functions
-#define ARGMAX 255
-#define ARGBUFF 54
+#define AMOUNT 5   // amount of functions
+#define ARGMAX 255 // max amount of arguments
+#define ARGBUFF 54 // arguments max length
 
-// initialisation
-typedef enum { nutral, save, load } keys;
-typedef char *(*functions)(int count, ...);
+// initialisation handy structs
+typedef enum { nutral, save, load } tags;
+typedef char *(*functions)(int count, char args[][ARGBUFF]);
 struct fundata {
   functions function;
-  keys key;
+  tags tag;
+  char *key;
 };
-
-// functions definition
-char *initprofile(int count, char args[][54]) {
-  if (count < 2) {
-    perror("error: too few arguments\n");
-    return NULL;
-  } else if (count > 2) {
-    perror("error: too much arguments\n");
-    return NULL;
-  }
-  FILE *pdatabase = fopen("../data.json", "a");
-  if (!pdatabase) {
-    perror("error: failed to save the file\n");
-    return NULL;
-  }
-  fprintf(pdatabase, "%s : {\n%s}", args[0], args[1]);
-
-  if (fclose(pdatabase) != 0) {
-    perror("error: could not close the file safely\npress enter to continue "
-           "...\n");
-    getchar();
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-      ;
-  }
-  char *result = calloc(30, 1);
-  sprintf(result, "data store is a success\n");
-  return result;
-}
 
 // the handler
 char *handler(const char *request, size_t size) {
   // initialising the hashmap
-  hashmap *funmap = inithash(AMOUNT);
-  appendhash(funmap, "initprofile", initprofile, 1);
+  hashmap *funmap = functionmapinit();
   printhashmapstatus(funmap);
-  // parsing data
+  // parsing the request
+  //  parsing data
   const char *tail = request;
   const char *head = NULL;
   char command[54] = {0};
@@ -63,7 +34,7 @@ char *handler(const char *request, size_t size) {
   int amountcopied = 0;
   bool copyready = false;
   // parsing loop
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0; i < size + 1; i++) {
     char current = request[i];
     if (current == ' ' || current == '\0') {
       ignore = true;
@@ -78,7 +49,7 @@ char *handler(const char *request, size_t size) {
       tail = request + i;
       copyready = false;
     } else if (ignore && offset == 0) {
-      head = request + i - 1;
+      head = request + i;
       copyready = true;
     }
     if (copyready) {
@@ -86,19 +57,34 @@ char *handler(const char *request, size_t size) {
       if (amountcopied == 0) {
         strncpy(command, tail, head - tail);
       } else {
-        strncpy(args[amountcopied], tail, head - tail);
+        strncpy(args[amountcopied - 1], tail, head - tail);
       }
       amountcopied++;
     }
   }
+  args[amountcopied - 1][strlen(args[amountcopied - 1]) - 2] = '\0';
   // for debuggin could be removed
   printf("%s:\n", command);
-  for (int i = 0; i < ARGMAX; i++) {
+  for (int i = 0; i < amountcopied - 1; i++) {
     printf(" %s,", args[i]);
   }
   printf("\n");
   // end of debuging block
-  char *(*pfunction)(int, char[][ARGBUFF]) = callvalue(funmap, command).value;
-  char *result = pfunction(amountcopied - 1, args);
+  // here we call the function with the arguments needed
+  struct fundata *functiondata = callvalue(funmap, command).value;
+  if (!functiondata) {
+    printf("the command \"%s\" is unknown", command);
+    freemap(funmap);
+    return NULL;
+  }
+  functions calledfunction = functiondata->function;
+  if (!calledfunction) {
+    printf("there is somthing wrong with the function pointer \"%s\"",
+           functiondata->key);
+    freemap(funmap);
+    return NULL;
+  }
+  char *result = calledfunction(amountcopied - 1, args);
+  freemap(funmap);
   return result;
 }
