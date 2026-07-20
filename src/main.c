@@ -72,6 +72,7 @@ int main(void) {
       continue;
     }
 
+    // this block sends the generated response to the client
     sndbufflen = strlen(sendbuffer);
     if (!sendbuffer) {
       printf("the buffer pointer is null skipped this itterstion\n");
@@ -79,13 +80,14 @@ int main(void) {
       continue;
     }
 
-    // this block sends the generated response to the client
+    // this block sends the responce to the client
     if ((bytes = send(thierfd, sendbuffer, sndbufflen, 0)) < 0) {
       perror("error code: ");
       exit(bytes);
     }
 
     // this closes the client file descripter and clears the uneeded data
+    free(sendbuffer);
     close(thierfd);
     memset(recvbuffer, 0, 175);
   }

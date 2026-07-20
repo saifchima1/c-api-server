@@ -73,13 +73,13 @@ char *handler(const char *request, size_t size) {
   // here we call the function with the arguments needed
   struct fundata *functiondata = callvalue(funmap, command).value;
   if (!functiondata) {
-    printf("the command \"%s\" is unknown", command);
+    printf("the command \"%s\" is unknown\n", command);
     freemap(funmap);
     return NULL;
   }
   functions calledfunction = functiondata->function;
   if (!calledfunction) {
-    printf("there is somthing wrong with the function pointer \"%s\"",
+    printf("there is somthing wrong with the function pointer \"%s\"\n",
            functiondata->key);
     freemap(funmap);
     return NULL;
